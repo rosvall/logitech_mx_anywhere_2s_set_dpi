@@ -7,23 +7,20 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 
-typedef struct __attribute__((packed)) {
-	uint8_t a;
-	uint8_t b;
-	uint8_t c;
-	uint8_t d;
-	uint8_t e;
-	uint16_t dpi;
-} dpi_msg_t;
+#define REPORT_ID_SHORT 0x10
+#define HIDPP_RECEIVER_IDX     0xFF
 
-const int dpi_min = 10;
-const int dpi_max = 100000;
+#define DPI_MIN 10
+#define DPI_MAX 100000
 
-static void
-print_usage(const char * progname)
-{
-	fprintf(stderr, "Usage:\n" "%s HID_DEV DPI\n", progname);
-}
+struct hidpp20_msg {
+	uint8_t report_id;
+	uint8_t device_idx;
+	uint8_t sub_id;
+	uint8_t address;
+	uint8_t parameters[3];
+} __attribute__((packed));
+
 
 static bool
 is_chr_dev(const char * path)
@@ -36,52 +33,51 @@ is_chr_dev(const char * path)
 	}
 	
 	return st.st_mode & S_IFCHR;
-
 }
 
 static int
 set_dpi(const char * path, int dpi)
 {
-	if (!is_chr_dev(path)) {
-		fprintf(stderr, "ERROR: Not a character device: %s\n", path);
-		return -1;
-	}
-
 	int err = 0;
 
 	int fd = open(path, O_SYNC | O_RDWR);
 	if (fd <= 0) {
 		perror("open");
-		return -1;
+		return -4;
 	}
 	
-	dpi_msg_t msg = {
-		.a = 0x10,
-		.b = 0xff,
-		.c = 0x0a,
-		.d = 0x38,
-		.e = 0x00,
-		.dpi = htons(dpi),
+	struct hidpp20_msg msg = {
+		.report_id = REPORT_ID_SHORT,
+		.device_idx = HIDPP_RECEIVER_IDX,
+		.sub_id = 0x0A,
+		.address = 0x38,
+		.parameters = {
+			0x00,
+			dpi>>8,
+			dpi,
+		},
 	};
 	
-	ssize_t written = write(fd, (void *)&msg, sizeof(msg));
-	if (written != sizeof(msg)) {
+	ssize_t count;
+
+	count = write(fd, &msg, sizeof(msg));
+	if (count != sizeof(msg)) {
 		perror("write");
-		err = 1;
+		err = -5;
 		goto cleanup;
 	}
 	
-	dpi_msg_t response = {0};
-	ssize_t bytes_read = read(fd, &response, sizeof(response));
-	if (bytes_read != sizeof(response)) {
+	count = read(fd, &msg, sizeof(msg));
+	if (count != sizeof(msg)) {
 		perror("read");
-		err = 1;
-	} else {
-		uint16_t actual_dpi = ntohs(response.dpi);
-		if (actual_dpi != dpi) {
-			fprintf(stderr, "Failed to set DPI\n");
-			err = 1;
-		}
+		err = -6;
+		goto cleanup;
+	}
+
+	uint16_t actual_dpi = (msg.parameters[1]<<8) | msg.parameters[2];
+	if (actual_dpi != dpi) {
+		fprintf(stderr, "Failed to set DPI\n");
+		err = -7;
 	}
 	
 cleanup:
@@ -97,17 +93,22 @@ main(int argc, const char * argv[])
 {
 	if (argc != 3) {
 		fprintf(stderr, "ERROR: Incorrect number af arguments\n");
-		print_usage(argv[0]);
+		fprintf(stderr, "Usage:\n");
+		fprintf(stderr, "%s <hid_dev> <dpi>\n", argv[0]);
 		return -1;
 	}
 		
 	const char * dev = argv[1];
+	if (!is_chr_dev(dev)) {
+		fprintf(stderr, "ERROR: Not a character device: %s\n", dev);
+		return -2;
+	}
+
 	const int dpi = strtoul(argv[2], NULL, 10);
 	
-	if (dpi < dpi_min || dpi > dpi_max) {
-		fprintf(stderr, "ERROR: DPI must be in range %i ~ %i\n", dpi_min, dpi_max);
-		print_usage(argv[0]);
-		return -1;
+	if (dpi < DPI_MIN || dpi > DPI_MAX) {
+		fprintf(stderr, "ERROR: DPI must be in range %i ~ %i\n", DPI_MIN, DPI_MAX);
+		return -3;
 	}
 	
 	return set_dpi(dev, dpi);
