@@ -10,9 +10,11 @@ install: ${PROG} ${UDEV_RULE} ${UDEV_WRAPPER}
 	install -s -m 0755 -t /usr/local/bin ${PROG}
 	install -m 0755 -t /usr/local/bin ${UDEV_WRAPPER}
 	install -m 0644 -t /etc/udev/rules.d ${UDEV_RULE}
+	udevadm control -R
 
 uninstall:
 	rm -f /usr/local/bin/${PROG} /usr/local/bin/${UDEV_WRAPPER} /etc/udev/rules.d/${UDEV_RULE}
+	udevadm control -R
 
 clean:
 	rm -f ${PROG}
