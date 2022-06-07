@@ -46,11 +46,14 @@ set_dpi(const char * path, int dpi)
 		return -4;
 	}
 	
+	// XXX: The magic numbers are just copied from the debug
+	// output of ratbagd while setting the resolution
+	
 	struct hidpp20_msg msg = {
 		.report_id = REPORT_ID_SHORT,
 		.device_idx = HIDPP_RECEIVER_IDX,
-		.sub_id = 0x0A,
-		.address = 0x38,
+		.sub_id = 0x0A, // TODO
+		.address = 0x38, // TODO
 		.parameters = {
 			0x00,
 			dpi>>8,
