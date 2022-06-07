@@ -1,0 +1,6 @@
+ATTRS{idVendor}=="046d", \
+    ATTRS{idProduct}=="c52b", \
+    ACTION=="change", \
+    SUBSYSTEM=="power_supply", \
+    ATTR{online}=="1", \
+    RUN+="/usr/local/bin/logitech_mx_anywhere_2s_set_dpi_udev.sh $sys$devpath 4000"
