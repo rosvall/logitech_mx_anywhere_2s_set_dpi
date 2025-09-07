@@ -1,3 +1,9 @@
+> [!NOTE]
+> Moved to [codeberg.org/rosvall/logitech_mx_anywhere_2s_set_dpi](https://codeberg.org/rosvall/logitech_mx_anywhere_2s_set_dpi)
+>
+> For reasons given [here](https://github.com/rosvall/goodbye-github)
+
+
 # Hack to keep my Logitech MX Anywhere S2 mouse at 4000 DPI
 
 ## Why?
